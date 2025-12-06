@@ -15,7 +15,7 @@ description = "Benchmark environment for OpenEnv"
 requires-python = ">=3.10"
 dependencies = [
     # Core OpenEnv runtime (provides FastAPI server + HTTP client types)
-    "openenv[core]>=0.2.0",
+    "openenv[core] @ git+https://github.com/facebookresearch/OpenEnv.git@release",
     # Environment-specific dependencies
     # Add all dependencies needed for your environment here
     # Examples:
