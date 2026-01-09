@@ -1,8 +1,8 @@
 ---
 title: Benchmark Environment Server
-emoji: 🕹️
+emoji: 📠
 colorFrom: purple
-colorTo: blue
+colorTo: red
 sdk: docker
 pinned: false
 app_port: 8000
@@ -13,7 +13,7 @@ tags:
 
 # Benchmark Environment
 
-A test environment for benchmarking infrastructure and concurrency. Actions specify how many seconds to wait (sleep), making it ideal for testing parallel execution and server scaling. Returns server identity information to verify which instance handled each request.
+A simple test environment that echoes back messages. Perfect for testing the env APIs as well as demonstrating environment usage patterns.
 
 ## Quick Start
 
@@ -26,21 +26,19 @@ try:
     # Create environment from Docker image
     benchmarkenv = BenchmarkEnv.from_docker_image("benchmark-env:latest")
 
-    # Reset - get server identity
+    # Reset
     result = benchmarkenv.reset()
-    print(f"Host URL: {result.observation.host_url}")
-    print(f"PID: {result.observation.pid}")
-    print(f"Session Hash: {result.observation.session_hash}")
+    print(f"Reset: {result.observation.echoed_message}")
 
-    # Test concurrency with different wait times
-    wait_times = [0.5, 1.0, 2.0]
+    # Send multiple messages
+    messages = ["Hello, World!", "Testing echo", "Final message"]
 
-    for seconds in wait_times:
-        result = benchmarkenv.step(BenchmarkAction(wait_seconds=seconds))
-        print(f"Waited: {result.observation.waited_seconds}s")
-        print(f"  → Timestamp: {result.observation.timestamp}")
+    for msg in messages:
+        result = benchmarkenv.step(BenchmarkAction(message=msg))
+        print(f"Sent: '{msg}'")
+        print(f"  → Echoed: '{result.observation.echoed_message}'")
+        print(f"  → Length: {result.observation.message_length}")
         print(f"  → Reward: {result.reward}")
-        print(f"  → Server PID: {result.observation.pid}")
 
 finally:
     # Always clean up
@@ -52,47 +50,6 @@ That's it! The `BenchmarkEnv.from_docker_image()` method handles:
 - Waiting for the server to be ready
 - Connecting to the environment
 - Container cleanup when you call `close()`
-
-## Testing Concurrency
-
-The benchmark environment is designed to test concurrent execution:
-
-```python
-import asyncio
-from benchmark import BenchmarkAction, BenchmarkEnv
-
-async def parallel_requests():
-    # Connect to multiple servers or same server
-    clients = [
-        BenchmarkEnv(base_url="http://localhost:8000"),
-        BenchmarkEnv(base_url="http://localhost:8001"),
-        BenchmarkEnv(base_url="http://localhost:8002"),
-    ]
-
-    # Reset all clients
-    for client in clients:
-        result = client.reset()
-        print(f"Server {result.observation.session_hash}: PID {result.observation.pid}")
-
-    # Send concurrent requests with different wait times
-    import concurrent.futures
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        futures = []
-        for i, client in enumerate(clients):
-            future = executor.submit(
-                client.step,
-                BenchmarkAction(wait_seconds=i + 1)
-            )
-            futures.append((client, future))
-
-        for client, future in futures:
-            result = future.result()
-            print(f"Server {result.observation.session_hash} waited {result.observation.waited_seconds}s")
-
-    # Clean up
-    for client in clients:
-        client.close()
-```
 
 ## Building the Docker Image
 
@@ -162,25 +119,21 @@ The deployed space includes:
 
 ### Action
 **BenchmarkAction**: Contains a single field
-- `wait_seconds` (float) - Seconds to wait/sleep before returning (default: 0.0)
+- `message` (str) - The message to echo back
 
 ### Observation
-**BenchmarkObservation**: Contains server identity and timing information
-- `host_url` (str) - The URL of the server that handled the request
-- `pid` (int) - Process ID of the server
-- `session_hash` (str) - Unique 16-character hash identifying this server session
-- `waited_seconds` (float) - Actual seconds waited
-- `timestamp` (float) - Unix timestamp when observation was created
-- `reward` (float) - Reward based on wait time
-- `done` (bool) - Always False for benchmark environment
-- `metadata` (dict) - Additional info
+**BenchmarkObservation**: Contains the echo response and metadata
+- `echoed_message` (str) - The message echoed back
+- `message_length` (int) - Length of the message
+- `reward` (float) - Reward based on message length (length × 0.1)
+- `done` (bool) - Always False for echo environment
+- `metadata` (dict) - Additional info like step count
 
 ### Reward
-The reward is calculated as: `1.0 / (1.0 + wait_seconds)`
-- 0 seconds → reward: 1.0
-- 1 second → reward: 0.5
-- 2 seconds → reward: 0.33
-- Encourages faster responses
+The reward is calculated as: `message_length × 0.1`
+- "Hi" → reward: 0.2
+- "Hello, World!" → reward: 1.3
+- Empty message → reward: 0.0
 
 ## Advanced Usage
 
@@ -189,18 +142,14 @@ The reward is calculated as: `1.0 / (1.0 + wait_seconds)`
 If you already have a Benchmark environment server running, you can connect directly:
 
 ```python
-from benchmark import BenchmarkEnv, BenchmarkAction
+from benchmark import BenchmarkEnv
 
 # Connect to existing server
 benchmarkenv = BenchmarkEnv(base_url="<ENV_HTTP_URL_HERE>")
 
 # Use as normal
 result = benchmarkenv.reset()
-print(f"Connected to server: {result.observation.host_url}")
-print(f"Session: {result.observation.session_hash}")
-
-result = benchmarkenv.step(BenchmarkAction(wait_seconds=1.5))
-print(f"Waited {result.observation.waited_seconds}s")
+result = benchmarkenv.step(BenchmarkAction(message="Hello!"))
 ```
 
 Note: When connecting to an existing server, `benchmarkenv.close()` will NOT stop the server.
@@ -220,7 +169,7 @@ This verifies that:
 - Environment resets correctly
 - Step executes actions properly
 - State tracking works
-- Server identity is returned correctly
+- Rewards are calculated correctly
 
 ### Running Locally
 

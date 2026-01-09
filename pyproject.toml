@@ -15,8 +15,7 @@ description = "Benchmark environment for OpenEnv"
 requires-python = ">=3.10"
 dependencies = [
     # Core OpenEnv runtime (provides FastAPI server + HTTP client types)
-    "openenv[core] @ git+https://github.com/meta-pytorch/OpenEnv.git@async-http",
-    "uvicorn[standard]",
+    "openenv-core @ git+https://github.com/meta-pytorch/OpenEnv.git@main",
     # Environment-specific dependencies
     # Add all dependencies needed for your environment here
     # Examples:
