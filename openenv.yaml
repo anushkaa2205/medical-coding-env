@@ -1,7 +1,3 @@
-spec_version: 1
-name: benchmark
-type: space
-runtime: fastapi
-app: server.app:app
-port: 8000
-
+name: medical-coding-env
+version: "1.0.0"
+description: Medical Clinical Coding benchmark (Easy, Medium, Hard tasks)

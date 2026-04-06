@@ -1,38 +1,14 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# All rights reserved.
-#
-# This source code is licensed under the BSD-style license found in the
-# LICENSE file in the root directory of this source tree.
+from pydantic import BaseModel, Field
+from typing import List
 
-"""
-Data models for the Benchmark Environment.
+class Observation(BaseModel):
+    patient_age: int = Field(description="Age of patient")
+    patient_sex: str = Field(description="Sex of patient")
+    clinical_note: str = Field(description="Doctor's notes")
+    feedback: str = Field(description="Grader feedback")
+    remaining_tasks: int = Field(description="Tasks left")
 
-The benchmark environment tests concurrency and server performance.
-"""
-
-from openenv.core.env_server.types import Action, Observation
-
-
-class BenchmarkAction(Action):
-    """Action for the Benchmark environment - wait for a duration."""
-
-    wait_seconds: float = 0.0
-
-
-class BenchmarkObservation(Observation):
-    """Observation from Benchmark environment - concurrency test metrics."""
-
-    # Time actually waited
-    waited_seconds: float = 0.0
-
-    # Process ID to verify concurrency
-    pid: int = 0
-
-    # Unique session hash to verify session isolation
-    session_hash: str = ""
-
-    # Host URL for debugging
-    host_url: str = ""
-
-    # Step count in this session
-    step_count: int = 0
+class Action(BaseModel):
+    primary_icd10: str = Field(description="Primary diagnosis code")
+    secondary_icd10s: List[str] = Field(description="Secondary codes")
+    cpt_codes: List[str] = Field(description="Procedure codes")

@@ -6,7 +6,6 @@
 
 """Benchmark environment server components."""
 
-from .benchmark_environment import BenchmarkEnvironment
-
+from .environment import MedicalCodingEnv
 __all__ = ["BenchmarkEnvironment"]
 
