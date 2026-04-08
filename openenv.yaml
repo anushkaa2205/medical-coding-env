@@ -1,3 +1,11 @@
+entrypoint: med_env.app:app
+
 name: medical-coding-env
 version: "1.0.0"
 description: Medical Clinical Coding benchmark (Easy, Medium, Hard tasks)
+
+authors:
+  - name: Team Flash
+
+tags:
+  - openenv
