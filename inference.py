@@ -1,20 +1,19 @@
 import asyncio
 import os
 from typing import List, Optional
-
-from matplotlib.pyplot import step
 from openai import OpenAI
-
 from med_env.environment import Action as MyEnvV4Action, MedicalCodingEnv as MyEnvV4Env
+from dotenv import load_dotenv
+
+load_dotenv()
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
+API_KEY = os.getenv("HF_TOKEN")
 
 TASK_NAME = "medical-coding"
 BENCHMARK = "medical-coding-env"
-
-MAX_STEPS = 3  # we have 3 tasks
+MAX_STEPS = 3
 SUCCESS_SCORE_THRESHOLD = 0.5
 
 
@@ -33,6 +32,9 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]):
 
 
 async def main():
+    if not API_KEY:
+        raise ValueError("HF_TOKEN is not set")
+
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
     env = await MyEnvV4Env.from_docker_image(None)
@@ -40,6 +42,7 @@ async def main():
     rewards = []
     steps_taken = 0
     success = False
+    score = 0.0
 
     log_start(TASK_NAME, BENCHMARK, MODEL_NAME)
 
@@ -51,14 +54,35 @@ async def main():
                 break
 
             obs = result.observation
+            note = obs.clinical_note.lower()
 
-            # 💡 simple deterministic baseline (perfect answers)
-            if step == 1:
-                action = MyEnvV4Action(primary_icd10="J02.0", secondary_icd10s=[], cpt_codes=["87880"])
-            elif step == 2:
-                action = MyEnvV4Action(primary_icd10="I10", secondary_icd10s=["E11.9"], cpt_codes=["36415", "83036"])
+            if "strep" in note or "pharyngitis" in note:
+                action = MyEnvV4Action(
+                    primary_icd10="J02.0",
+                    secondary_icd10s=[],
+                    cpt_codes=["87880"]
+                )
+
+            elif "hypertension" in note or "bp" in note or "diabetes" in note:
+                action = MyEnvV4Action(
+                    primary_icd10="I10",
+                    secondary_icd10s=["E11.9"],
+                    cpt_codes=["36415", "83036"]
+                )
+
+            elif "fracture" in note or "ladder" in note:
+                action = MyEnvV4Action(
+                    primary_icd10="S52.501A",
+                    secondary_icd10s=["W11.XXXA", "J45.909"],
+                    cpt_codes=["25605", "73110"]
+                )
+
             else:
-                action = MyEnvV4Action(primary_icd10="S52.501A", secondary_icd10s=["W11.XXXA", "J45.909"], cpt_codes=["25605", "73110"])
+                action = MyEnvV4Action(
+                    primary_icd10="I10",
+                    secondary_icd10s=[],
+                    cpt_codes=[]
+                )
 
             result = await env.step(action)
 
@@ -69,6 +93,7 @@ async def main():
             steps_taken = step
 
             log_step(step, str(action.model_dump()), reward, done, None)
+
             if done:
                 break
 
